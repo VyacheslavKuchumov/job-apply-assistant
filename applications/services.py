@@ -1,3 +1,4 @@
+import ast
 import json
 import os
 import re
@@ -153,13 +154,26 @@ def parse_pi_json(raw):
         return json.loads(cleaned)
     except json.JSONDecodeError:
         pass
+    try:
+        parsed = ast.literal_eval(cleaned)
+        if isinstance(parsed, dict):
+            return parsed
+    except (ValueError, SyntaxError):
+        pass
 
     start = cleaned.find('{')
     end = cleaned.rfind('}')
     if start != -1 and end != -1 and end > start:
+        fragment = cleaned[start:end + 1]
         try:
-            return json.loads(cleaned[start:end + 1])
+            return json.loads(fragment)
         except json.JSONDecodeError:
+            pass
+        try:
+            parsed = ast.literal_eval(fragment)
+            if isinstance(parsed, dict):
+                return parsed
+        except (ValueError, SyntaxError):
             return None
     return None
 
@@ -172,7 +186,11 @@ KEY_LABELS = {
     'gap_closing_plan': 'План закрытия пробелов',
     'likely_tasks': 'Вероятные задачи',
     'questions': 'Возможные вопросы',
+    'questions_to_prepare': 'Вопросы для подготовки',
     'focus_cases': 'Кейсы для акцента',
+    'candidate_cases_to_use': 'Кейсы кандидата',
+    'vacancy_essence': 'Суть вакансии',
+    'before_interview': 'Перед собеседованием',
     'what_to_say': 'Что говорить',
     'prepare_topics': 'Что подготовить',
 }
@@ -187,7 +205,20 @@ def render_structured(value, level=0):
     if value is None:
         return ''
     if isinstance(value, str):
-        return value.strip()
+        stripped = value.strip()
+        if stripped.startswith(('{', '[')) and stripped.endswith(('}', ']')):
+            try:
+                parsed = json.loads(stripped)
+                return render_structured(parsed, level + 1)
+            except json.JSONDecodeError:
+                pass
+            try:
+                parsed = ast.literal_eval(stripped)
+                if isinstance(parsed, (dict, list)):
+                    return render_structured(parsed, level + 1)
+            except (ValueError, SyntaxError):
+                pass
+        return stripped
     if isinstance(value, (int, float, bool)):
         return str(value)
     if isinstance(value, list):

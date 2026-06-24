@@ -48,3 +48,13 @@ class AuthFlowTests(TestCase):
         self.assertIn('Главные риски:', rendered)
         self.assertIn('- Мало опыта', rendered)
         self.assertNotIn("{'summary'", rendered)
+
+    def test_python_dict_string_is_rendered_as_readable_text(self):
+        rendered = render_structured(
+            "{'vacancy_essence': 'Backend на Scala', "
+            "'likely_tasks': ['Разработка бизнес-фичей', 'Unit-тесты']}"
+        )
+        self.assertIn('Суть вакансии: Backend на Scala', rendered)
+        self.assertIn('Вероятные задачи:', rendered)
+        self.assertIn('- Unit-тесты', rendered)
+        self.assertNotIn("{'vacancy_essence'", rendered)

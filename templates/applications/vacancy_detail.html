@@ -1,4 +1,5 @@
 {% extends 'base.html' %}
+{% load generation_extras %}
 {% block title %}{{ vacancy.title }} · Job Assistant{% endblock %}
 {% block extra_head %}{% if vacancy.generation_status == 'running' %}<meta http-equiv="refresh" content="5">{% endif %}{% endblock %}
 {% block content %}
@@ -67,22 +68,22 @@
 <section class="grid two">
   <article class="card">
     <h2>Оценка соответствия</h2>
-    <div class="text-block">{{ vacancy.fit_assessment|linebreaksbr }}</div>
+    <div class="text-block">{{ vacancy.fit_assessment|pretty_generated|linebreaksbr }}</div>
   </article>
   <article class="card">
     <h2>Сопроводительное письмо</h2>
-    <div class="text-block">{{ vacancy.generated_cover_letter|linebreaksbr }}</div>
+    <div class="text-block">{{ vacancy.generated_cover_letter|pretty_generated|linebreaksbr }}</div>
   </article>
 </section>
 
 <section class="card">
   <h2>Адаптированное резюме</h2>
-  <div class="text-block">{{ vacancy.generated_resume|linebreaksbr }}</div>
+  <div class="text-block">{{ vacancy.generated_resume|pretty_generated|linebreaksbr }}</div>
 </section>
 
 <section class="card">
   <h2>Советы для собеседования</h2>
-  <div class="text-block">{{ vacancy.generated_interview_tips|linebreaksbr }}</div>
+  <div class="text-block">{{ vacancy.generated_interview_tips|pretty_generated|linebreaksbr }}</div>
 </section>
 {% else %}
 <section class="card empty">
