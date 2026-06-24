@@ -1,9 +1,34 @@
 from django import forms
+from django.contrib.auth.forms import UserCreationForm
+from django.contrib.auth.models import User
+
 from .models import Profile, Vacancy
 
 
 TEXTAREA = {'class': 'textarea', 'rows': 5}
 INPUT = {'class': 'input'}
+
+
+class SignUpForm(UserCreationForm):
+    email = forms.EmailField(
+        label='Email',
+        required=False,
+        widget=forms.EmailInput(attrs=INPUT),
+    )
+
+    class Meta:
+        model = User
+        fields = ['username', 'email', 'password1', 'password2']
+        labels = {
+            'username': 'Логин',
+            'password1': 'Пароль',
+            'password2': 'Повтор пароля',
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        for field in self.fields.values():
+            field.widget.attrs.setdefault('class', 'input')
 
 
 class ProfileForm(forms.ModelForm):

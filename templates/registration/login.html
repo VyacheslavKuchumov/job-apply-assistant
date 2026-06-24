@@ -1,0 +1,34 @@
+{% extends 'base.html' %}
+{% block title %}Вход · Job Assistant{% endblock %}
+{% block content %}
+<div class="auth-wrap">
+  <form method="post" class="card form-card auth-card">
+    {% csrf_token %}
+    <div>
+      <p class="eyebrow">Аккаунт</p>
+      <h1>Вход</h1>
+      <p class="muted">Войдите, чтобы открыть профиль и свои вакансии.</p>
+    </div>
+
+    {% if form.non_field_errors %}
+      <div class="message error">{{ form.non_field_errors }}</div>
+    {% endif %}
+
+    <label class="field">
+      <span>Логин</span>
+      <input class="input" type="text" name="username" autofocus required value="{{ form.username.value|default:'' }}">
+      {% for error in form.username.errors %}<small class="error">{{ error }}</small>{% endfor %}
+    </label>
+
+    <label class="field">
+      <span>Пароль</span>
+      <input class="input" type="password" name="password" required>
+      {% for error in form.password.errors %}<small class="error">{{ error }}</small>{% endfor %}
+    </label>
+
+    <input type="hidden" name="next" value="{{ next }}">
+    <button class="button full" type="submit">Войти</button>
+    <p class="muted center">Нет аккаунта? <a href="{% url 'signup' %}">Зарегистрироваться</a></p>
+  </form>
+</div>
+{% endblock %}

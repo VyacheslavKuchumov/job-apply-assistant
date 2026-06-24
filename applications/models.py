@@ -1,9 +1,18 @@
+from django.conf import settings
 from django.db import models
 from django.urls import reverse
 from django.utils import timezone
 
 
 class Profile(models.Model):
+    user = models.OneToOneField(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='profile',
+        null=True,
+        blank=True,
+        verbose_name='Пользователь',
+    )
     full_name = models.CharField('ФИО', max_length=255, blank=True)
     contacts = models.TextField('Контакты', blank=True)
     desired_position = models.CharField('Желаемая должность', max_length=255, blank=True)
@@ -21,7 +30,16 @@ class Profile(models.Model):
         verbose_name_plural = 'Профиль'
 
     def __str__(self):
-        return self.full_name or 'Профиль кандидата'
+        return self.full_name or self.user_username or 'Профиль кандидата'
+
+    @property
+    def user_username(self):
+        return self.user.get_username() if self.user_id else ''
+
+    @classmethod
+    def get_for_user(cls, user):
+        profile, _ = cls.objects.get_or_create(user=user)
+        return profile
 
     @classmethod
     def get_solo(cls):
@@ -30,6 +48,14 @@ class Profile(models.Model):
 
 
 class Vacancy(models.Model):
+    owner = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='vacancies',
+        null=True,
+        blank=True,
+        verbose_name='Пользователь',
+    )
     title = models.CharField('Название вакансии', max_length=255)
     company_url = models.URLField('Ссылка на сайт компании', blank=True)
     vacancy_url = models.URLField('Ссылка на вакансию', blank=True)

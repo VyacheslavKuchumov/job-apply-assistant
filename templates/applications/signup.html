@@ -1,0 +1,30 @@
+{% extends 'base.html' %}
+{% block title %}Регистрация · Job Assistant{% endblock %}
+{% block content %}
+<div class="auth-wrap">
+  <form method="post" class="card form-card auth-card">
+    {% csrf_token %}
+    <div>
+      <p class="eyebrow">Новый аккаунт</p>
+      <h1>Регистрация</h1>
+      <p class="muted">После регистрации вы сразу войдёте в приложение.</p>
+    </div>
+
+    {% if form.non_field_errors %}
+      <div class="message error">{{ form.non_field_errors }}</div>
+    {% endif %}
+
+    {% for field in form %}
+      <label class="field">
+        <span>{{ field.label }}</span>
+        {{ field }}
+        {% if field.help_text %}<small>{{ field.help_text }}</small>{% endif %}
+        {% for error in field.errors %}<small class="error">{{ error }}</small>{% endfor %}
+      </label>
+    {% endfor %}
+
+    <button class="button full" type="submit">Создать аккаунт</button>
+    <p class="muted center">Уже есть аккаунт? <a href="{% url 'login' %}">Войти</a></p>
+  </form>
+</div>
+{% endblock %}

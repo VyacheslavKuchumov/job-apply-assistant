@@ -1,0 +1,13 @@
+{% extends 'base.html' %}
+{% block title %}Выход · Job Assistant{% endblock %}
+{% block content %}
+<section class="card auth-card">
+  <p class="eyebrow">Аккаунт</p>
+  <h1>Вы вышли</h1>
+  <p>Сессия завершена.</p>
+  <div class="actions">
+    <a class="button" href="{% url 'login' %}">Войти снова</a>
+    <a class="button secondary" href="{% url 'home' %}">На главную</a>
+  </div>
+</section>
+{% endblock %}
