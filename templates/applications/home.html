@@ -1,0 +1,42 @@
+{% extends 'base.html' %}
+{% block title %}Главная · Job Assistant{% endblock %}
+{% block content %}
+<section class="hero card">
+  <p class="eyebrow">MVP для откликов</p>
+  <h1>Резюме, письма и подготовка под вакансии</h1>
+  <p>Заполните профиль один раз, добавляйте вакансии и генерируйте материалы через локальный <b>pi</b> агент.</p>
+  <div class="actions">
+    <a class="button" href="{% url 'profile' %}">Заполнить профиль</a>
+    <a class="button secondary" href="{% url 'vacancy_create' %}">Добавить вакансию</a>
+  </div>
+</section>
+
+<section class="grid two">
+  <div class="card">
+    <h2>Профиль</h2>
+    <p><b>{{ profile.full_name|default:'ФИО не заполнено' }}</b></p>
+    <p>{{ profile.desired_position|default:'Желаемая должность не указана' }}</p>
+    <a href="{% url 'profile' %}">Открыть профиль →</a>
+  </div>
+  <div class="card">
+    <h2>Вакансии</h2>
+    <p class="big-number">{{ vacancies_count }}</p>
+    <p>Сохранённых вакансий</p>
+    <a href="{% url 'vacancy_list' %}">Открыть список →</a>
+  </div>
+</section>
+
+{% if latest_vacancies %}
+<section class="card">
+  <h2>Последние вакансии</h2>
+  <div class="list">
+    {% for vacancy in latest_vacancies %}
+      <a class="list-item" href="{{ vacancy.get_absolute_url }}">
+        <span>{{ vacancy.title }}</span>
+        <small>{% if vacancy.generated_at %}сгенерировано{% else %}без генерации{% endif %}</small>
+      </a>
+    {% endfor %}
+  </div>
+</section>
+{% endif %}
+{% endblock %}

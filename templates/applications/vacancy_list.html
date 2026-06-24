@@ -1,0 +1,35 @@
+{% extends 'base.html' %}
+{% block title %}Вакансии · Job Assistant{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <p class="eyebrow">CRUD вакансий</p>
+    <h1>Вакансии</h1>
+  </div>
+  <a class="button" href="{% url 'vacancy_create' %}">+ Добавить</a>
+</div>
+
+<form class="search" method="get">
+  <input class="input" type="search" name="q" value="{{ q }}" placeholder="Поиск по названию">
+  <button class="button secondary" type="submit">Найти</button>
+</form>
+
+<div class="cards-list">
+  {% for vacancy in vacancies %}
+    <article class="card vacancy-card">
+      <a href="{{ vacancy.get_absolute_url }}"><h2>{{ vacancy.title }}</h2></a>
+      <p>{{ vacancy.description|truncatechars:180 }}</p>
+      <div class="meta">
+        <span>{% if vacancy.generated_at %}✅ материалы есть{% else %}⏳ нужно сгенерировать{% endif %}</span>
+        <span>{{ vacancy.updated_at|date:'d.m H:i' }}</span>
+      </div>
+    </article>
+  {% empty %}
+    <div class="card empty">
+      <h2>Пока нет вакансий</h2>
+      <p>Добавьте первую вакансию с hh.ru или другого сайта.</p>
+      <a class="button" href="{% url 'vacancy_create' %}">Добавить вакансию</a>
+    </div>
+  {% endfor %}
+</div>
+{% endblock %}

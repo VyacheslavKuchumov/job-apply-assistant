@@ -1,0 +1,23 @@
+{% extends 'base.html' %}
+{% block title %}{{ title }} · Job Assistant{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <p class="eyebrow">Вакансия</p>
+    <h1>{{ title }}</h1>
+  </div>
+  <a class="button secondary" href="{% url 'vacancy_list' %}">Назад</a>
+</div>
+
+<form method="post" class="card form-card">
+  {% csrf_token %}
+  {% for field in form %}
+    <label class="field">
+      <span>{{ field.label }}</span>
+      {{ field }}
+      {% for error in field.errors %}<small class="error">{{ error }}</small>{% endfor %}
+    </label>
+  {% endfor %}
+  <button class="button" type="submit">Сохранить</button>
+</form>
+{% endblock %}

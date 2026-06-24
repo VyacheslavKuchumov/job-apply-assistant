@@ -1,0 +1,31 @@
+{% load static %}
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}Job Assistant{% endblock %}</title>
+  <link rel="stylesheet" href="{% static 'css/app.css' %}">
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="{% url 'home' %}">Job Assistant</a>
+    <nav>
+      <a href="{% url 'profile' %}">Профиль</a>
+      <a href="{% url 'vacancy_list' %}">Вакансии</a>
+      <a class="primary-link" href="{% url 'vacancy_create' %}">+ Вакансия</a>
+    </nav>
+  </header>
+
+  <main class="container">
+    {% if messages %}
+      <div class="messages">
+        {% for message in messages %}
+          <div class="message {{ message.tags }}">{{ message }}</div>
+        {% endfor %}
+      </div>
+    {% endif %}
+    {% block content %}{% endblock %}
+  </main>
+</body>
+</html>

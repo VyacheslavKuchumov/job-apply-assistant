@@ -1,0 +1,24 @@
+{% extends 'base.html' %}
+{% block title %}Профиль · Job Assistant{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <p class="eyebrow">Личный кабинет</p>
+    <h1>Анкета кандидата</h1>
+  </div>
+  <a class="button secondary" href="{% url 'vacancy_list' %}">К вакансиям</a>
+</div>
+
+<form method="post" class="card form-card">
+  {% csrf_token %}
+  {% for field in form %}
+    <label class="field">
+      <span>{{ field.label }}</span>
+      {{ field }}
+      {% if field.help_text %}<small>{{ field.help_text }}</small>{% endif %}
+      {% for error in field.errors %}<small class="error">{{ error }}</small>{% endfor %}
+    </label>
+  {% endfor %}
+  <button class="button" type="submit">Сохранить профиль</button>
+</form>
+{% endblock %}

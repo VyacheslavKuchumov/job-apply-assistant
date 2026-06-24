@@ -1,0 +1,31 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Virtualenvs
+.venv/
+venv/
+env/
+
+# Django/local runtime
+*.sqlite3
+db.sqlite3
+media/
+staticfiles/
+server.log
+server.pid
+*.log
+
+# Local secrets/env
+.env
+.env.*
+!.env.example
+
+# Editors/OS
+.vscode/
+.idea/
+.DS_Store

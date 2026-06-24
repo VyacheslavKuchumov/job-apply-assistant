@@ -1,0 +1,102 @@
+{% extends 'base.html' %}
+{% block title %}{{ vacancy.title }} · Job Assistant{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <p class="eyebrow">Детальная страница</p>
+    <h1>{{ vacancy.title }}</h1>
+  </div>
+  <div class="actions compact">
+    <a class="button secondary" href="{% url 'vacancy_edit' vacancy.pk %}">Изменить</a>
+    <a class="button secondary" href="{% url 'vacancy_list' %}">Список</a>
+  </div>
+</div>
+
+<section class="grid two">
+  <article class="card">
+    <h2>Данные вакансии</h2>
+    {% if vacancy.vacancy_url %}<p><a href="{{ vacancy.vacancy_url }}" target="_blank" rel="noreferrer">Ссылка на вакансию ↗</a></p>{% endif %}
+    {% if vacancy.company_url %}<p><a href="{{ vacancy.company_url }}" target="_blank" rel="noreferrer">Сайт компании ↗</a></p>{% endif %}
+    <h3>Описание</h3>
+    <div class="text-block collapsed">{{ vacancy.description|linebreaksbr }}</div>
+    {% if vacancy.notes %}
+      <h3>Заметки</h3>
+      <div class="text-block">{{ vacancy.notes|linebreaksbr }}</div>
+    {% endif %}
+  </article>
+
+  <article class="card generate-card">
+    <h2>{% if vacancy.has_generation %}Перегенерировать{% else %}Сгенерировать{% endif %}</h2>
+    <p>Запрос уйдёт в локальный <b>pi</b> агент. Если он не ответит, приложение сохранит базовый fallback.</p>
+    <form method="post" action="{% url 'vacancy_generate' vacancy.pk %}">
+      {% csrf_token %}
+      {{ generate_form.extra_instructions.label_tag }}
+      {{ generate_form.extra_instructions }}
+      <button class="button full" type="submit">Сгенерировать резюме и письмо</button>
+    </form>
+    {% if vacancy.generated_at %}<p class="muted">Последняя генерация: {{ vacancy.generated_at|date:'d.m.Y H:i' }}</p>{% endif %}
+    {% if vacancy.resume_pdf or vacancy.resume_tex %}
+      <div class="file-links">
+        {% if vacancy.resume_pdf %}<a class="button secondary" href="{{ vacancy.resume_pdf.url }}">PDF резюме</a>{% endif %}
+        {% if vacancy.resume_tex %}<a class="button secondary" href="{{ vacancy.resume_tex.url }}">LaTeX .tex</a>{% endif %}
+      </div>
+    {% endif %}
+  </article>
+</section>
+
+{% if vacancy.has_generation %}
+<section class="grid two">
+  <article class="card">
+    <h2>Оценка соответствия</h2>
+    <div class="text-block">{{ vacancy.fit_assessment|linebreaksbr }}</div>
+  </article>
+  <article class="card">
+    <h2>Сопроводительное письмо</h2>
+    <div class="text-block">{{ vacancy.generated_cover_letter|linebreaksbr }}</div>
+  </article>
+</section>
+
+<section class="card">
+  <h2>Адаптированное резюме</h2>
+  <div class="text-block">{{ vacancy.generated_resume|linebreaksbr }}</div>
+</section>
+
+<section class="card">
+  <h2>Советы для собеседования</h2>
+  <div class="text-block">{{ vacancy.generated_interview_tips|linebreaksbr }}</div>
+</section>
+{% else %}
+<section class="card empty">
+  <h2>Материалы ещё не сгенерированы</h2>
+  <p>Нажмите кнопку генерации выше после заполнения профиля и описания вакансии.</p>
+</section>
+{% endif %}
+
+<section class="card" id="chat">
+  <h2>Чат доработок</h2>
+  <p class="muted">Просите pi переписать конкретный блок, изменить тон, усилить кейсы или подготовить ответы на вопросы.</p>
+  <div class="chat-box">
+    {% for msg in chat_messages %}
+      <div class="chat-message {{ msg.role }}">
+        <strong>{{ msg.get_role_display }}</strong>
+        <div>{{ msg.message|linebreaksbr }}</div>
+        <small>{{ msg.created_at|date:'d.m H:i' }}</small>
+      </div>
+    {% empty %}
+      <p class="muted">Сообщений пока нет.</p>
+    {% endfor %}
+  </div>
+  <form method="post" action="{% url 'vacancy_chat' vacancy.pk %}" class="chat-form">
+    {% csrf_token %}
+    {{ chat_form.message }}
+    <button class="button full" type="submit">Отправить pi</button>
+  </form>
+</section>
+
+<section class="danger-zone">
+  <form method="post" action="{% url 'vacancy_delete' vacancy.pk %}" onsubmit="return confirm('Удалить вакансию?')">
+    {% csrf_token %}
+    <button class="link-danger" type="submit">Удалить вакансию</button>
+  </form>
+</section>
+{% endblock %}
