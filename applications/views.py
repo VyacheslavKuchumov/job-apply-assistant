@@ -8,7 +8,7 @@ from django.views.decorators.http import require_POST
 
 from .forms import ChatForm, GenerateForm, ProfileForm, SignUpForm, VacancyForm
 from .models import Profile, Vacancy, VacancyChatMessage
-from .services import chat_with_pi, enqueue_generation
+from .services import chat_with_pi, enqueue_generation, render_structured
 
 
 @login_required
@@ -102,8 +102,15 @@ def vacancy_edit(request, pk):
 @login_required
 def vacancy_detail(request, pk):
     vacancy = get_object_or_404(Vacancy, pk=pk, owner=request.user)
+    pretty_generation = {
+        'fit_assessment': render_structured(vacancy.fit_assessment),
+        'cover_letter': render_structured(vacancy.generated_cover_letter),
+        'resume': render_structured(vacancy.generated_resume),
+        'interview_tips': render_structured(vacancy.generated_interview_tips),
+    }
     return render(request, 'applications/vacancy_detail.html', {
         'vacancy': vacancy,
+        'pretty_generation': pretty_generation,
         'generate_form': GenerateForm(),
         'chat_form': ChatForm(),
         'chat_messages': vacancy.chat_messages.all(),
