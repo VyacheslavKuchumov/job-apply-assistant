@@ -11,19 +11,14 @@ from .models import Profile, Vacancy, VacancyChatMessage
 from .services import chat_with_pi, generate_for_vacancy
 
 
+@login_required
 def home(request):
-    profile = None
-    vacancies_count = 0
-    latest_vacancies = []
-    if request.user.is_authenticated:
-        profile = Profile.get_for_user(request.user)
-        vacancies = Vacancy.objects.filter(owner=request.user)
-        vacancies_count = vacancies.count()
-        latest_vacancies = vacancies[:5]
+    profile = Profile.get_for_user(request.user)
+    vacancies = Vacancy.objects.filter(owner=request.user)
     return render(request, 'applications/home.html', {
         'profile': profile,
-        'vacancies_count': vacancies_count,
-        'latest_vacancies': latest_vacancies,
+        'vacancies_count': vacancies.count(),
+        'latest_vacancies': vacancies[:5],
     })
 
 

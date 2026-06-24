@@ -6,6 +6,11 @@ from .models import Profile, Vacancy
 
 
 class AuthFlowTests(TestCase):
+    def test_unauthenticated_home_redirects_to_login(self):
+        response = self.client.get(reverse('home'))
+        self.assertEqual(response.status_code, 302)
+        self.assertIn(reverse('login'), response['Location'])
+
     def test_protected_pages_redirect_to_login(self):
         response = self.client.get(reverse('profile'))
         self.assertEqual(response.status_code, 302)
