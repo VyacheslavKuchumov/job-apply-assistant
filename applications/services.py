@@ -4,11 +4,14 @@ import re
 import shutil
 import subprocess
 import textwrap
+import threading
+import traceback
 from html import escape
 from pathlib import Path
 
 from django.conf import settings
 from django.core.files import File
+from django.db import close_old_connections
 from django.utils import timezone
 
 from reportlab.lib.pagesizes import A4
@@ -82,6 +85,7 @@ def build_generation_prompt(profile, vacancy, extra_instructions=''):
 - resume_latex: полный LaTeX-документ резюме, предпочтительно XeLaTeX, аккуратный минималистичный шаблон;
 - cover_letter: сопроводительное письмо;
 - interview_tips: советы для собеседования: суть вакансии, вероятные задачи, вопросы, кейсы кандидата, что говорить, что подготовить.
+Все значения JSON должны быть строками, не вложенными объектами и не массивами.
 """.strip()
 
 
@@ -158,6 +162,58 @@ def parse_pi_json(raw):
         except json.JSONDecodeError:
             return None
     return None
+
+
+KEY_LABELS = {
+    'summary': 'Кратко',
+    'match_level': 'Уровень соответствия',
+    'main_risks': 'Главные риски',
+    'how_to_position': 'Как позиционироваться',
+    'gap_closing_plan': 'План закрытия пробелов',
+    'likely_tasks': 'Вероятные задачи',
+    'questions': 'Возможные вопросы',
+    'focus_cases': 'Кейсы для акцента',
+    'what_to_say': 'Что говорить',
+    'prepare_topics': 'Что подготовить',
+}
+
+
+def humanize_key(key):
+    return KEY_LABELS.get(str(key), str(key).replace('_', ' ').capitalize())
+
+
+def render_structured(value, level=0):
+    """Convert nested JSON fragments from pi to readable text instead of Python dict repr."""
+    if value is None:
+        return ''
+    if isinstance(value, str):
+        return value.strip()
+    if isinstance(value, (int, float, bool)):
+        return str(value)
+    if isinstance(value, list):
+        lines = []
+        for item in value:
+            rendered = render_structured(item, level + 1).strip()
+            if not rendered:
+                continue
+            if '\n' in rendered:
+                lines.append(f'- {rendered.replace(chr(10), chr(10) + "  ")}')
+            else:
+                lines.append(f'- {rendered}')
+        return '\n'.join(lines)
+    if isinstance(value, dict):
+        sections = []
+        for key, item in value.items():
+            rendered = render_structured(item, level + 1).strip()
+            if not rendered:
+                continue
+            label = humanize_key(key)
+            if isinstance(item, (list, dict)):
+                sections.append(f'{label}:\n{rendered}')
+            else:
+                sections.append(f'{label}: {rendered}')
+        return '\n\n'.join(sections)
+    return str(value).strip()
 
 
 def fallback_generation(profile, vacancy, raw_response='', log=''):
@@ -329,24 +385,61 @@ def generate_for_vacancy(profile, vacancy, extra_instructions=''):
     prompt = build_generation_prompt(profile, vacancy, extra_instructions)
     raw, log = run_pi(prompt)
     data = parse_pi_json(raw)
+    had_error = False
+    error_message = ''
     if not data:
+        had_error = True
+        error_message = log or 'pi не вернул корректный JSON, сохранён fallback.'
         data = fallback_generation(profile, vacancy, raw_response=raw, log=log)
     else:
         for key in JSON_KEYS:
             data.setdefault(key, '')
         if not data.get('resume_latex'):
-            data['resume_latex'] = make_latex(profile, vacancy, data.get('resume', ''))
+            data['resume_latex'] = make_latex(profile, vacancy, render_structured(data.get('resume', '')))
 
-    vacancy.fit_assessment = str(data.get('fit_assessment', '')).strip()
-    vacancy.generated_resume = str(data.get('resume', '')).strip()
-    vacancy.generated_resume_latex = str(data.get('resume_latex', '')).strip() or make_latex(profile, vacancy, vacancy.generated_resume)
-    vacancy.generated_cover_letter = str(data.get('cover_letter', '')).strip()
-    vacancy.generated_interview_tips = str(data.get('interview_tips', '')).strip()
+    vacancy.fit_assessment = render_structured(data.get('fit_assessment', '')).strip()
+    vacancy.generated_resume = render_structured(data.get('resume', '')).strip()
+    vacancy.generated_resume_latex = render_structured(data.get('resume_latex', '')).strip() or make_latex(profile, vacancy, vacancy.generated_resume)
+    vacancy.generated_cover_letter = render_structured(data.get('cover_letter', '')).strip()
+    vacancy.generated_interview_tips = render_structured(data.get('interview_tips', '')).strip()
     vacancy.generated_at = timezone.now()
+    vacancy.generation_status = vacancy.STATUS_ERROR if had_error else vacancy.STATUS_SUCCESS
+    vacancy.generation_error = error_message
     vacancy.generation_log = log or 'pi ответил успешно'
     save_material_files(vacancy)
     vacancy.save()
     return vacancy
+
+
+def enqueue_generation(vacancy_id, user_id, extra_instructions=''):
+    """Run generation in a daemon thread so the web request returns immediately."""
+    def worker():
+        close_old_connections()
+        try:
+            from .models import Profile, Vacancy
+
+            vacancy = Vacancy.objects.get(pk=vacancy_id, owner_id=user_id)
+            profile = Profile.get_for_user(vacancy.owner)
+            generate_for_vacancy(profile, vacancy, extra_instructions)
+        except Exception as exc:
+            error = f'{exc}\n\n{traceback.format_exc()}'
+            try:
+                from .models import Vacancy
+
+                Vacancy.objects.filter(pk=vacancy_id, owner_id=user_id).update(
+                    generation_status=Vacancy.STATUS_ERROR,
+                    generation_error=error[:5000],
+                    generation_log=error[:5000],
+                    generated_at=timezone.now(),
+                )
+            except Exception:
+                pass
+        finally:
+            close_old_connections()
+
+    thread = threading.Thread(target=worker, name=f'vacancy-generation-{vacancy_id}', daemon=True)
+    thread.start()
+    return thread
 
 
 def chat_with_pi(profile, vacancy, message):

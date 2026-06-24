@@ -8,7 +8,7 @@ from django.views.decorators.http import require_POST
 
 from .forms import ChatForm, GenerateForm, ProfileForm, SignUpForm, VacancyForm
 from .models import Profile, Vacancy, VacancyChatMessage
-from .services import chat_with_pi, generate_for_vacancy
+from .services import chat_with_pi, enqueue_generation
 
 
 @login_required
@@ -60,7 +60,12 @@ def vacancy_list(request):
     q = request.GET.get('q', '').strip()
     if q:
         vacancies = vacancies.filter(title__icontains=q)
-    return render(request, 'applications/vacancy_list.html', {'vacancies': vacancies, 'q': q})
+    has_running_generation = vacancies.filter(generation_status=Vacancy.STATUS_RUNNING).exists()
+    return render(request, 'applications/vacancy_list.html', {
+        'vacancies': vacancies,
+        'q': q,
+        'has_running_generation': has_running_generation,
+    })
 
 
 @login_required
@@ -120,9 +125,15 @@ def vacancy_generate(request, pk):
     vacancy = get_object_or_404(Vacancy, pk=pk, owner=request.user)
     form = GenerateForm(request.POST)
     if form.is_valid():
-        messages.info(request, 'Запущена генерация через pi. Страница обновится после завершения запроса.')
-        generate_for_vacancy(Profile.get_for_user(request.user), vacancy, form.cleaned_data['extra_instructions'])
-        messages.success(request, 'Материалы сгенерированы.')
+        if vacancy.generation_status == Vacancy.STATUS_RUNNING:
+            messages.info(request, 'Генерация уже идёт. Дождитесь завершения.')
+        else:
+            vacancy.generation_status = Vacancy.STATUS_RUNNING
+            vacancy.generation_error = ''
+            vacancy.generation_log = 'Генерация запущена, pi агент работает.'
+            vacancy.save(update_fields=['generation_status', 'generation_error', 'generation_log', 'updated_at'])
+            enqueue_generation(vacancy.pk, request.user.pk, form.cleaned_data['extra_instructions'])
+            messages.info(request, 'Генерация запущена. Можно открыть список вакансий: статус обновится автоматически после завершения.')
     else:
         messages.error(request, 'Проверьте форму генерации.')
     return redirect(vacancy)

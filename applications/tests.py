@@ -3,6 +3,7 @@ from django.test import TestCase
 from django.urls import reverse
 
 from .models import Profile, Vacancy
+from .services import render_structured
 
 
 class AuthFlowTests(TestCase):
@@ -37,3 +38,13 @@ class AuthFlowTests(TestCase):
         response = self.client.get(reverse('vacancy_list'))
         self.assertContains(response, 'Owner vacancy')
         self.assertNotContains(response, 'Other vacancy')
+
+    def test_structured_json_is_rendered_as_readable_text(self):
+        rendered = render_structured({
+            'summary': 'Подходит частично',
+            'main_risks': ['Мало опыта', 'Не указан Akka'],
+        })
+        self.assertIn('Кратко: Подходит частично', rendered)
+        self.assertIn('Главные риски:', rendered)
+        self.assertIn('- Мало опыта', rendered)
+        self.assertNotIn("{'summary'", rendered)

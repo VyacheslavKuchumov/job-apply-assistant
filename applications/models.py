@@ -48,6 +48,17 @@ class Profile(models.Model):
 
 
 class Vacancy(models.Model):
+    STATUS_IDLE = 'idle'
+    STATUS_RUNNING = 'running'
+    STATUS_SUCCESS = 'success'
+    STATUS_ERROR = 'error'
+    GENERATION_STATUS_CHOICES = [
+        (STATUS_IDLE, 'Нужно сгенерировать'),
+        (STATUS_RUNNING, 'Идёт генерация'),
+        (STATUS_SUCCESS, 'Успешно'),
+        (STATUS_ERROR, 'Ошибка'),
+    ]
+
     owner = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
@@ -70,6 +81,13 @@ class Vacancy(models.Model):
     resume_pdf = models.FileField('PDF резюме', upload_to='resumes/', blank=True)
     resume_tex = models.FileField('LaTeX файл', upload_to='resumes/', blank=True)
     generated_at = models.DateTimeField('Сгенерировано', null=True, blank=True)
+    generation_status = models.CharField(
+        'Статус генерации',
+        max_length=16,
+        choices=GENERATION_STATUS_CHOICES,
+        default=STATUS_IDLE,
+    )
+    generation_error = models.TextField('Ошибка генерации', blank=True)
     generation_log = models.TextField('Лог генерации', blank=True)
 
     created_at = models.DateTimeField('Создано', auto_now_add=True)
@@ -93,6 +111,26 @@ class Vacancy(models.Model):
             self.generated_cover_letter,
             self.generated_interview_tips,
         ])
+
+    @property
+    def generation_status_label(self):
+        if self.generation_status == self.STATUS_RUNNING:
+            return 'Идёт генерация'
+        if self.generation_status == self.STATUS_ERROR:
+            return 'Ошибка генерации'
+        if self.generation_status == self.STATUS_SUCCESS or self.has_generation:
+            return 'Успешно'
+        return 'Нужно сгенерировать'
+
+    @property
+    def generation_status_class(self):
+        if self.generation_status == self.STATUS_RUNNING:
+            return 'running'
+        if self.generation_status == self.STATUS_ERROR:
+            return 'error'
+        if self.generation_status == self.STATUS_SUCCESS or self.has_generation:
+            return 'success'
+        return 'idle'
 
 
 class VacancyChatMessage(models.Model):

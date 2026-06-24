@@ -1,16 +1,33 @@
 {% extends 'base.html' %}
 {% block title %}{{ vacancy.title }} · Job Assistant{% endblock %}
+{% block extra_head %}{% if vacancy.generation_status == 'running' %}<meta http-equiv="refresh" content="5">{% endif %}{% endblock %}
 {% block content %}
 <div class="page-head">
   <div>
     <p class="eyebrow">Детальная страница</p>
     <h1>{{ vacancy.title }}</h1>
+    <span class="status-badge status-{{ vacancy.generation_status_class }}">{{ vacancy.generation_status_label }}</span>
   </div>
   <div class="actions compact">
     <a class="button secondary" href="{% url 'vacancy_edit' vacancy.pk %}">Изменить</a>
     <a class="button secondary" href="{% url 'vacancy_list' %}">Список</a>
   </div>
 </div>
+
+{% if vacancy.generation_status == 'running' %}
+<section class="status-panel panel-running">
+  <strong>Идёт генерация.</strong> pi агент готовит резюме, письмо и советы. Страница обновляется автоматически.
+</section>
+{% elif vacancy.generation_status == 'success' %}
+<section class="status-panel panel-success">
+  <strong>Всё прошло успешно.</strong> Материалы готовы.
+</section>
+{% elif vacancy.generation_status == 'error' %}
+<section class="status-panel panel-error">
+  <strong>Ошибка генерации.</strong>
+  <div>{{ vacancy.generation_error|linebreaksbr }}</div>
+</section>
+{% endif %}
 
 <section class="grid two">
   <article class="card">
@@ -27,14 +44,16 @@
 
   <article class="card generate-card">
     <h2>{% if vacancy.has_generation %}Перегенерировать{% else %}Сгенерировать{% endif %}</h2>
-    <p>Запрос уйдёт в локальный <b>pi</b> агент. Если он не ответит, приложение сохранит базовый fallback.</p>
+    <p>Запрос уйдёт в локальный <b>pi</b> агент. Сразу после нажатия появится статус, а генерация продолжится в фоне.</p>
     <form method="post" action="{% url 'vacancy_generate' vacancy.pk %}">
       {% csrf_token %}
       {{ generate_form.extra_instructions.label_tag }}
       {{ generate_form.extra_instructions }}
-      <button class="button full" type="submit">Сгенерировать резюме и письмо</button>
+      <button class="button full" type="submit" {% if vacancy.generation_status == 'running' %}disabled{% endif %}>
+        {% if vacancy.generation_status == 'running' %}Генерация уже идёт{% else %}Сгенерировать резюме и письмо{% endif %}
+      </button>
     </form>
-    {% if vacancy.generated_at %}<p class="muted">Последняя генерация: {{ vacancy.generated_at|date:'d.m.Y H:i' }}</p>{% endif %}
+    {% if vacancy.generated_at %}<p class="muted">Последнее завершение: {{ vacancy.generated_at|date:'d.m.Y H:i' }}</p>{% endif %}
     {% if vacancy.resume_pdf or vacancy.resume_tex %}
       <div class="file-links">
         {% if vacancy.resume_pdf %}<a class="button secondary" href="{{ vacancy.resume_pdf.url }}">PDF резюме</a>{% endif %}

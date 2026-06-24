@@ -1,5 +1,6 @@
 {% extends 'base.html' %}
 {% block title %}Вакансии · Job Assistant{% endblock %}
+{% block extra_head %}{% if has_running_generation %}<meta http-equiv="refresh" content="5">{% endif %}{% endblock %}
 {% block content %}
 <div class="page-head">
   <div>
@@ -17,10 +18,16 @@
 <div class="cards-list">
   {% for vacancy in vacancies %}
     <article class="card vacancy-card">
-      <a href="{{ vacancy.get_absolute_url }}"><h2>{{ vacancy.title }}</h2></a>
+      <div class="vacancy-card-head">
+        <a href="{{ vacancy.get_absolute_url }}"><h2>{{ vacancy.title }}</h2></a>
+        <span class="status-badge status-{{ vacancy.generation_status_class }}">{{ vacancy.generation_status_label }}</span>
+      </div>
       <p>{{ vacancy.description|truncatechars:180 }}</p>
+      {% if vacancy.generation_error %}
+        <p class="status-error-text">{{ vacancy.generation_error|truncatechars:180 }}</p>
+      {% endif %}
       <div class="meta">
-        <span>{% if vacancy.generated_at %}✅ материалы есть{% else %}⏳ нужно сгенерировать{% endif %}</span>
+        <span>{% if vacancy.generation_status == 'running' %}pi агент работает…{% elif vacancy.generated_at %}обновлено: {{ vacancy.generated_at|date:'d.m H:i' }}{% else %}материалов пока нет{% endif %}</span>
         <span>{{ vacancy.updated_at|date:'d.m H:i' }}</span>
       </div>
     </article>
